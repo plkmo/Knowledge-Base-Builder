@@ -1,0 +1,15 @@
+*.tar
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.pth
+*.pyc
+/data/*
+data/
+data
+/dist/*
+/build/*
+/__pycache__/*
+/kbuilder.egg-info/*
