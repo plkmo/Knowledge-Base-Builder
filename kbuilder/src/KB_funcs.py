@@ -8,12 +8,9 @@ import os
 import re
 import pandas as pd
 import numpy as np
-from src.preprocessing_funcs import preprocess_corpus
-from src.utils import save_as_pickle, load_pickle
-from flair.data import Sentence
-from flair.models import SequenceTagger
+from .preprocessing_funcs import preprocess_corpus
+from .utils import save_as_pickle, load_pickle
 import spacy
-import nltk
 from nltk.stem.porter import PorterStemmer
 import networkx as nx
 import multiprocessing
@@ -25,83 +22,10 @@ logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', \
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logger = logging.getLogger('__file__')
 
-class Text_Tagger(object):
-    def __init__(self,):
-        self.ner_tagger = SequenceTagger.load('ner')
-        self.pos_tagger = SequenceTagger.load('pos')
-        self.KB_parser = Text_KB_Parser()
-    
-    def tag_sentence(self, sentence):
-        sent = Sentence(sentence)
-        self.ner_tagger.predict(sent)
-        self.pos_tagger.predict(sent)
-        ner_dict = sent.to_dict(tag_type='ner')
-        pos_dict = sent.to_dict(tag_type='pos')
-        return ner_dict, pos_dict
-    
-    def question_parser(self, question):
-        triplets = self.KB_parser.get_triplets_from_sentence(question)
-        if (len(triplets) > 0):
-            triplets = triplets[0]
-            subject, predicate, object_ = triplets
-            if all(triplets):
-                return subject, predicate, object_
-
-        ner_dict, pos_dict = self.tag_sentence(question)
-        entities = ner_dict['entities']
-        
-        selected_entity = entities[0]['text'] if len(entities) > 0 else None
-        confidence = entities[0]['confidence'] if len(entities) > 0 else 0
-        
-        if len(entities) > 0:
-            for entity in entities:
-                if entity['confidence'] > confidence:
-                    selected_entity = entity['text']
-                    confidence = entity['confidence']
-        
-        qns = None; q_confidence = 0
-        verb = None; v_confidence = 0
-        pronouns = ["i", "he", "she", "we", "they",\
-                "his", "her", "hers", "it", "its", "you", "your", "yours", "their", "theirs", "them", "mine",\
-                "my", "myself", "yourself", "yourselves", "herself", "hiself", "themselves"]
-        for word in pos_dict['entities']:
-            if (word['type'] in ['PRON', 'ADV']) and (word['text'].lower() not in pronouns):
-                if word['confidence'] > q_confidence:
-                    q_confidence = word['confidence']
-                    qns = word['text']
-            
-            if (word['type'] in ['VERB']) and (word['text'].lower() not in ['is',]):
-                if verb is None:
-                    v_confidence = word['confidence']
-                    verb = word['text']
-                else:
-                    if (word['text'].lower() not in ['does', 'do', 'did', 'have', 'has', 'had']):
-                        v_confidence = word['confidence']
-                        verb = word['text']
-            
-            if (selected_entity == None) and (word['type'] in ["X", "NOUN", "PROPN"]):
-                selected_entity = word['text']
-        
-        if verb is None:
-            verb = "is"
-        
-        if (qns is not None) and (verb is not None) and (selected_entity is not None):
-            qns = re.sub("[\.\?,!\"':;><]+", "", qns)
-            verb = re.sub("[\.\?,!\"':;><]+", "", verb)
-            selected_entity = re.sub("[\.\?,!\"':;><]+", "", selected_entity)
-        return qns, verb, selected_entity
-
 def load_tagged_data(args):
     if not os.path.isfile("./data/df_tagged.pkl"):
         logger.info("Loading preprocessed text dataframe...")
-        df = preprocess_corpus()
-        tagger = Text_Tagger()
-        
-        logger.info("Tagging text datasets...")
-        df['ner_tags'] = df.progress_apply(lambda x: tagger.tag_sentence(x['comment']), axis=1)
-        df['pos_tags'] = df.progress_apply(lambda x: x['ner_tags'][1], axis=1)
-        df['ner_tags'] = df.progress_apply(lambda x: x['ner_tags'][0], axis=1)
-        save_as_pickle("df_tagged.pkl", df)
+        df = preprocess_corpus(args)
         logger.info("Done and saved!")
     else:
         logger.info("Loading saved tagged dataset...")
@@ -112,6 +36,12 @@ def load_tagged_data(args):
 class Text_KB_Parser(object):
     def __init__(self,):
         self.nlp = spacy.load("en_core_web_lg")
+        self.subjects = []
+        self.predicates = []
+        self.objects = []
+        self.triplets = []
+        
+    def clear_(self):
         self.subjects = []
         self.predicates = []
         self.objects = []
@@ -156,6 +86,56 @@ class Text_KB_Parser(object):
         self.subjects = list(set(self.subjects))
         self.predicates = list(set(self.predicates))
         self.objects = list(set(self.objects))
+        
+    def tag_sentence(self, sentence):
+        sent = Sentence(sentence)
+        self.ner_tagger.predict(sent)
+        self.pos_tagger.predict(sent)
+        ner_dict = sent.to_dict(tag_type='ner')
+        pos_dict = sent.to_dict(tag_type='pos')
+        return ner_dict, pos_dict
+    
+    def question_parser(self, question):
+        triplets = self.get_triplets_from_sentence(question)
+        if (len(triplets) > 0):
+            triplets = triplets[0]
+            subject, predicate, object_ = triplets
+            if all(triplets):
+                return subject, predicate, object_
+        
+        # if can't find from dependency tree, crudely get from POS & NER tags
+        doc = self.nlp(question)
+        entities = doc.ents
+        
+        selected_entity = entities[0].text if len(entities) > 0 else None
+        
+        qns = None
+        verb = None
+        pronouns = ["i", "he", "she", "we", "they",\
+                "his", "her", "hers", "it", "its", "you", "your", "yours", "their", "theirs", "them", "mine",\
+                "my", "myself", "yourself", "yourselves", "herself", "hiself", "themselves"]
+        for word in doc:
+            if (word.pos_ in ['PRON', 'ADV']) and (word.text.lower() not in pronouns):
+                qns = word.text
+            
+            if (word.pos_ in ['VERB']) and (word.text.lower() not in ['is',]):
+                if verb is None:
+                    verb = word.text
+                else:
+                    if (word.text.lower() not in ['does', 'do', 'did', 'have', 'has', 'had']):
+                        verb = word.text
+            
+            if (selected_entity == None) and (word.pos_ in ["X", "NOUN", "PROPN"]):
+                selected_entity = word.text
+        
+        if verb is None:
+            verb = "is"
+        
+        if (qns is not None) and (verb is not None) and (selected_entity is not None):
+            qns = re.sub("[\.\?,!\"':;><]+", "", qns)
+            verb = re.sub("[\.\?,!\"':;><]+", "", verb)
+            selected_entity = re.sub("[\.\?,!\"':;><]+", "", selected_entity)
+        return qns, verb, selected_entity
         
 def search(query, triplets, stemmer, key=0):
     '''
@@ -228,8 +208,7 @@ def double_matcher(tup, keys, terms, stemmer, stemmed_terms): # keys = 2 iterabl
     return matched_triplets_tmp
 
 def answer(qns, verb, selected_entity, triplets, stemmer):
-    qns_mapper = {'who':['is',], 'what':['is',], 'why':['because', 'due', 'is'], 'when':['is',], 'how':['is',]}
-    if not any([verb, selected_entity]):
+    if (qns == None) or (verb == None) or (selected_entity == None):
         return "I can't find what you want. Try something else."
     
     best_result = parallel_search([selected_entity, verb], triplets, stemmer, key=[0,1])
@@ -239,18 +218,21 @@ def answer(qns, verb, selected_entity, triplets, stemmer):
             return "I can't find what you want. Try something else."
         else:
             choice = np.random.choice([i for i in range(len(matched_subjects))])
-            ans = " ".join(matched_subjects[choice]).capitalize() + "."
+            ans = " ".join(matched_subjects[choice]) + "."
+            ans = ans[0].upper() + ans[1:]
             return ans
     else:
         choice = np.random.choice([i for i in range(len(best_result))])
-        ans = " ".join(best_result[choice]).capitalize() + "."
+        ans = " ".join(best_result[choice]) + "."
+        ans = ans[0].upper() + ans[1:]
         return ans
     
 class KB_Bot(object):
     def __init__(self, args=None):
         if args is None:
             args = load_pickle("args.pkl")
-        df = load_tagged_data(args)
+        self.df = load_tagged_data(args)
+        self.text_parser = Text_KB_Parser()
         
         if os.path.isfile("./data/subjects.pkl") and os.path.isfile("./data/predicates.pkl"):
             self.subjects = load_pickle("subjects.pkl")
@@ -260,13 +242,14 @@ class KB_Bot(object):
             logger.info("Loaded KB from saved files.")
         else:
             logger.info("Extracting KB...")
-            text_parser = Text_KB_Parser()
-            df.progress_apply(lambda x: text_parser.get_triplets_from_sentence(x['comment']), axis=1)
-            text_parser.cleanup_()
-            self.subjects = text_parser.subjects
-            self.predicates = text_parser.predicates
-            self.objects = text_parser.objects
-            self.triplets = text_parser.triplets
+            
+            self.df.progress_apply(lambda x: self.text_parser.get_triplets_from_sentence(x['sents']), axis=1)
+            self.text_parser.cleanup_()
+            self.subjects = self.text_parser.subjects
+            self.predicates = self.text_parser.predicates
+            self.objects = self.text_parser.objects
+            self.triplets = self.text_parser.triplets
+            self.text_parser.clear_()
             save_as_pickle("subjects.pkl", self.subjects)
             save_as_pickle("predicates.pkl", self.predicates)
             save_as_pickle("objects.pkl", self.objects)
@@ -274,7 +257,6 @@ class KB_Bot(object):
             logger.info("Done and saved!")
         
         logger.info("%d relationships in the KB." % len(self.triplets))
-        self.tagger = Text_Tagger()
         self.stemmer = PorterStemmer()
         
     def query(self, term, key=0):
@@ -284,8 +266,11 @@ class KB_Bot(object):
         return matched_triplets
     
     def ask(self, question):
-        qns, verb, selected_entity = self.tagger.question_parser(str(question))
-        print("\n***Identified qns, verb, selected entity: %s, %s, %s\n" % (qns, verb, selected_entity))
+        qns, verb, selected_entity = self.text_parser.question_parser(str(question))
+        print("\n\
+              ***Identified Subject: %s\n\
+              ***Identified Predicate: %s\n\
+              ***Identified Object: %s\n" % (qns, verb, selected_entity))
         ans = answer(qns, verb, selected_entity, self.triplets, self.stemmer)
         print(ans)
         return ans
