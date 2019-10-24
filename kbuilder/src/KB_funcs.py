@@ -83,9 +83,32 @@ class Text_KB_Parser(object):
         return triplets
     
     def cleanup_(self):
+        logger.info("Removing duplicates...")
         self.subjects = list(set(self.subjects))
         self.predicates = list(set(self.predicates))
         self.objects = list(set(self.objects))
+        self.triplets = list(set(self.triplets))
+        logger.info("Done!")
+        
+        logger.info("Merging entities...")
+        logger.info("Collecting entities in subjects and objects...")
+        subject_entities = []; object_entities = []
+        for s, p, o in tqdm(self.triplets, total=len(self.triplets)):
+            s_doc = self.nlp(s)
+            s_ents = s_doc.ents
+            if len(s_ents) > 0:
+                s_ents = [se.text for se in s_ents]
+                subject_entities.extend(s_ents)
+            
+            o_doc = self.nlp(o)
+            o_ents = o_doc.ents
+            if len(o_ents) > 0:
+                o_ents = [se.text for se in o_ents]
+                object_entities.extend(o_ents)
+        subject_entities = list(set(subject_entities))
+        object_entities = list(set(object_entities))
+        
+        logger.info("Done!")
         
     def tag_sentence(self, sentence):
         sent = Sentence(sentence)
