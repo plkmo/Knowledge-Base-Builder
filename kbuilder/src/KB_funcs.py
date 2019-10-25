@@ -24,12 +24,10 @@ logger = logging.getLogger('__file__')
 
 def load_tagged_data(args):
     if not os.path.isfile("./data/df_tagged.pkl"):
-        logger.info("Loading preprocessed text dataframe...")
         df = preprocess_corpus(args)
-        logger.info("Done and saved!")
     else:
         logger.info("Loading saved tagged dataset...")
-        df = load_pickle("df_tagged.pkl")
+        df = load_pickle("./data/df_tagged.pkl")
         logger.info("Loaded!")
     return df
 
@@ -46,6 +44,11 @@ class Text_KB_Parser(object):
         self.predicates = []
         self.objects = []
         self.triplets = []
+        try:
+            self.subject_entities = []; self.object_entities = []
+            self.subject_entities_d = {}; self.object_entities_d = {}
+        except:
+            pass
         
     def get_triplets_from_sentence(self, sentence, expand=False):
         triplets = []
@@ -55,7 +58,8 @@ class Text_KB_Parser(object):
             subject = None; objs = []
             for child in root.children:
                 if child.dep_ in ["nsubj", "nsubjpass"]:
-                    subject = child                    
+                    if len(re.findall("[a-z]+",child.text.lower())) > 0: # filter out all numbers/symbols
+                        subject = child                    
                 elif child.dep_ in ["dobj", "attr", "prep", "ccomp"]:
                     objs.append(child)
             
@@ -92,21 +96,33 @@ class Text_KB_Parser(object):
         
         logger.info("Merging entities...")
         logger.info("Collecting entities in subjects and objects...")
-        subject_entities = []; object_entities = []
+        self.subject_entities = []; self.object_entities = []
+        self.subject_entities_d = {}; self.object_entities_d = {}
         for s, p, o in tqdm(self.triplets, total=len(self.triplets)):
             s_doc = self.nlp(s)
             s_ents = s_doc.ents
             if len(s_ents) > 0:
-                s_ents = [se.text for se in s_ents]
-                subject_entities.extend(s_ents)
+                s_ents = [se.text for se in s_ents if len(re.findall("[a-z]+", se.text.lower())) > 0]
+                self.subject_entities.extend(s_ents)
+                for se in s_ents:
+                    if se not in self.subject_entities_d.keys():
+                        self.subject_entities_d[se] = [s]
+                    else:
+                        self.subject_entities_d[se].append(s)
             
             o_doc = self.nlp(o)
             o_ents = o_doc.ents
             if len(o_ents) > 0:
-                o_ents = [se.text for se in o_ents]
-                object_entities.extend(o_ents)
-        subject_entities = list(set(subject_entities))
-        object_entities = list(set(object_entities))
+                o_ents = [oe.text for oe in o_ents if len(re.findall("[a-z]+", oe.text.lower())) > 0]
+                self.object_entities.extend(o_ents)
+                for oe in o_ents:
+                    if oe not in self.object_entities_d.keys():
+                        self.object_entities_d[oe] = [o]
+                    else:
+                        self.object_entities_d[oe].append(o)
+                    
+        self.subject_entities = list(set(self.subject_entities))
+        self.object_entities = list(set(self.object_entities))
         
         logger.info("Done!")
         
@@ -219,16 +235,29 @@ def parallel_search(query, triplets, stemmer, key=0):
     
     return matched_triplets
 
-def double_matcher(tup, keys, terms, stemmer, stemmed_terms): # keys = 2 iterables
+def double_matcher(tup, keys, terms, stemmer, stemmed_terms): # terms, keys >= 2 iterables
     matched_triplets_tmp = []
     target = tup[keys[0]].lower(); target2 = tup[keys[1]].lower()
     stemmed_target = " ".join([stemmer.stem(t) for t in target.split()])
     stemmed_target2 = " ".join([stemmer.stem(t) for t in target2.split()])
-    if (re.search(terms[0], target) is not None) and (re.search(terms[1], target2) is not None):
-        matched_triplets_tmp.append(tup)
-    elif (re.search(stemmed_terms[0], stemmed_target) is not None) and (re.search(stemmed_terms[1], stemmed_target2) is not None):
-        matched_triplets_tmp.append(tup)
-    return matched_triplets_tmp
+    
+    if (len(keys) == 3) and (len(terms) == 3):
+        target3 = tup[keys[2]].lower()
+        stemmed_target3 = " ".join([stemmer.stem(t) for t in target3.split()])
+        if (re.search(terms[0], target) is not None) and (re.search(terms[1], target2) is not None) \
+            and (re.search(terms[2], target3) is not None):
+            matched_triplets_tmp.append(tup)
+        elif (re.search(stemmed_terms[0], stemmed_target) is not None) and \
+                (re.search(stemmed_terms[1], stemmed_target2) is not None) and \
+                (re.search(stemmed_terms[2], stemmed_target3) is not None):
+            matched_triplets_tmp.append(tup)
+        return matched_triplets_tmp
+    else:
+        if (re.search(terms[0], target) is not None) and (re.search(terms[1], target2) is not None):
+            matched_triplets_tmp.append(tup)
+        elif (re.search(stemmed_terms[0], stemmed_target) is not None) and (re.search(stemmed_terms[1], stemmed_target2) is not None):
+            matched_triplets_tmp.append(tup)
+        return matched_triplets_tmp
 
 def answer(qns, verb, selected_entity, triplets, stemmer):
     if (qns == None) or (verb == None) or (selected_entity == None):
@@ -253,38 +282,80 @@ def answer(qns, verb, selected_entity, triplets, stemmer):
 class KB_Bot(object):
     def __init__(self, args=None):
         if args is None:
-            args = load_pickle("args.pkl")
-        self.df = load_tagged_data(args)
+            args = load_pickle("./data/args.pkl")
+        self.stemmer = PorterStemmer()
         self.text_parser = Text_KB_Parser()
         
-        if os.path.isfile("./data/subjects.pkl") and os.path.isfile("./data/predicates.pkl"):
-            self.subjects = load_pickle("subjects.pkl")
-            self.predicates = load_pickle("predicates.pkl")
-            self.objects = load_pickle("objects.pkl")
-            self.triplets = load_pickle("triplets.pkl")
-            logger.info("Loaded KB from saved files.")
+        if os.path.isfile(args.state_dict):
+            self.load_(args)
         else:
-            logger.info("Extracting KB...")
-            
+            logger.info("Building KB...")
+            self.df = load_tagged_data(args)
+            logger.info("Extracting triplets...")
             self.df.progress_apply(lambda x: self.text_parser.get_triplets_from_sentence(x['sents']), axis=1)
             self.text_parser.cleanup_()
             self.subjects = self.text_parser.subjects
             self.predicates = self.text_parser.predicates
             self.objects = self.text_parser.objects
             self.triplets = self.text_parser.triplets
+            self.subject_entities = self.text_parser.subject_entities
+            self.object_entities = self.text_parser.object_entities
+            self.subject_entities_d = self.text_parser.subject_entities_d
+            self.object_entities_d = self.text_parser.object_entities_d
             self.text_parser.clear_()
-            save_as_pickle("subjects.pkl", self.subjects)
-            save_as_pickle("predicates.pkl", self.predicates)
-            save_as_pickle("objects.pkl", self.objects)
-            save_as_pickle("triplets.pkl", self.triplets)
-            logger.info("Done and saved!")
+            self.save_(args)
+            logger.info("Done and saved at %s!" % args.state_dict)
         
-        logger.info("%d relationships in the KB." % len(self.triplets))
-        self.stemmer = PorterStemmer()
+        logger.info("\n***Document statistics***")
+        logger.info("%d sentences" % len(self.df))
+        logger.info("%d characters" % self.df['length'].sum())
         
-    def query(self, term, key=0):
-        #key_dict = {'subject':0, 'predicate':1, 'object':2}
-        matched_triplets = parallel_search(term, self.triplets, self.stemmer, key=key)
+        logger.info("\n***KB statistics***")
+        logger.info("%d subject-predicate-object triplets" % len(self.triplets))
+        logger.info("%d subjects" % len(self.subjects))
+        logger.info("%d predicates" % len(self.predicates))
+        logger.info("%d objects" % len(self.objects))
+        logger.info("%d unique entities" % (len(self.subject_entities) +\
+                                            len(self.object_entities)))
+        
+        
+    def save_(self, args):
+        filename = args.state_dict
+        state_dict = {'df': self.df,\
+                      'subjects': self.subjects,\
+                      'predicates': self.predicates,\
+                      'objects': self.objects,\
+                      'triplets': self.triplets,\
+                      'subject_entities': self.subject_entities,\
+                      'object_entities': self.object_entities,\
+                      'subject_entities_d': self.subject_entities_d,\
+                      'object_entities_d': self.object_entities_d,\
+                      }
+        save_as_pickle(filename, state_dict)
+        logger.info("Saved state dict.")
+        return
+    
+    def load_(self, args):
+        state_dict = load_pickle(args.state_dict)
+        self.df = state_dict['df']
+        self.subjects = state_dict['subjects']
+        self.predicates = state_dict['predicates']
+        self.objects = state_dict['objects']
+        self.triplets = state_dict['triplets']
+        self.subject_entities = state_dict['subject_entities']
+        self.object_entities = state_dict['object_entities']
+        self.subject_entities_d = state_dict['subject_entities_d']
+        self.object_entities_d = state_dict['object_entities_d']
+        logger.info("Loaded KB from saved file.")
+        return
+        
+    def query(self, term, key='subject'):
+        key_dict = {'subject':0, 'predicate':1, 'object':2}
+        if isinstance(key, str):
+            key_ = key_dict[key]
+        elif isinstance(key, list):
+            key_ = [key_dict[k] for k in key]
+        matched_triplets = parallel_search(term, self.triplets, self.stemmer, key=key_)
         print("%d results found." % len(matched_triplets))
         return matched_triplets
     
@@ -312,6 +383,7 @@ if __name__ == "__main__":
     bot.chat()
 
     '''
+    **To-do-list
     ### Graphify ###
     logger.info("Initializing graph...")
     G = nx.MultiDiGraph()

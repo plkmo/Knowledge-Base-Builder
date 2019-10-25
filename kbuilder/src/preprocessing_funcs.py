@@ -21,10 +21,10 @@ logger = logging.getLogger('__file__')
 def preprocess_corpus(args):
     
     if os.path.isfile("./data/df.pkl"):
-        df = load_pickle("df.pkl")
+        df = load_pickle("./data/df.pkl")
         logger.info("Loaded preprocessed data.")
     else:
-        logger.info("Reading file...")
+        logger.info("Reading file %s" % args.text_file)
         with open(args.text_file, "r", encoding="utf8") as f:
             text = f.readlines()
         
@@ -36,13 +36,12 @@ def preprocess_corpus(args):
         logger.info("Preprocessing text...")
         text = " ".join(text1)
         text = re.sub('<[A-Z]+/*>', '', text) # remove special tokens eg. <FIL/>, <S>
-        text = re.sub('[\[\]]+', '', text) # remove brackets around Singlish
-        text = re.sub('[()]', '', text) # remove brackets around fillers
-        text = re.sub('[#]', '', text) # remove entity tags
-        text = re.sub('[*!_?]+', '', text) # remove special chars *!_?
-        text = re.sub(r"[\*\"\n\\…\+\-\/\=\(\)‘•€\[\]\|♫:;—”“~`]", " ", text)
-        text = re.sub(' {2,}', ' ', text) # remove extra spaces
-        text = re.sub("^ +", "", text)
+        text = re.sub(r"[\*\"\n\\…\+\-\/\=\(\)‘•€\[\]\|♫:;—”“~`#]", " ", text)
+        text = re.sub(' {2,}', ' ', text) # remove extra spaces > 1
+        text = re.sub("^ +", "", text) # remove space in front
+        text = re.sub(r"([\.\?,!]){2,}", r"\1", text) # remove multiple puncs
+        text = re.sub(r" +([\.\?,!])", r"\1", text) # remove extra spaces in front of punc
+        text = re.sub(r"([A-Z]{2,})", lambda x: x.group(1).capitalize(), text) # Replace all CAPS with capitalize
         del text1
         
         sents = re.split("\.", text)
@@ -59,7 +58,7 @@ def preprocess_corpus(args):
         logger.info("Removing char sequences of length < 7")
         df = df[df['length'] >= 7]
         
-        save_as_pickle("df.pkl", df)
+        save_as_pickle("./data/df.pkl", df)
         logger.info("Done and saved.")
         
     return df

@@ -1,0 +1,7 @@
+networkx==2.3
+nltk==3.4.4
+numpy==1.16.4
+pandas==0.24.2
+regex==2019.8.19
+spacy==2.1.8
+tqdm==4.32.1

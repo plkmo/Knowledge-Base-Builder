@@ -1,51 +1,141 @@
 # Knowledge Base Builder
-Builds a Knowledge Base from given input corpus, from which applications can be served. Provides analytics insights into text contents.
-*Note this repo currently in development. (see [To do list](#to-do-list)) 
-
----
-
-## Contents
-**Tasks**:  
-1. [Classification](#1-classification)
-2. [Automatic Speech Recognition](#2-automatic-speech-recognition)
-3. [Text Summarization](#3-text-summarization)
-4. [Machine Translation](#4-machine-translation)
-5. [Natural Language Generation](#5-natural-language-generation)
-6. [Punctuation Restoration](#6-punctuation-restoration)  
-7. [Named Entity Recognition](#7-named-entity-recognition)
-  
-[Benchmark Results](#benchmark-results)  
-[References](#references)
+Builds a Knowledge Base from a given input corpus, from which different applications can be served. Also provides flexible query capabilities as well as analytics insights into text contents.
 
 ---
 
 ## Pre-requisites
-torch==1.2.0 ; spacy==2.1.8 ; torchtext==0.4.0 ; seqeval==0.0.12 ; pytorch-nlp==0.4.1  
-For mixed precision training (-fp16=1), apex must be installed: [apex==0.1](https://github.com/NVIDIA/apex)  
-For chinese support in Translation: jieba==0.39  
-For ASR: librosa==0.7.0 ; soundfile==0.10.2  
+networkx==2.3 ; spacy==2.1.8 ; nltk==3.4.4  
 For more details, see requirements.txt
-
-** Pre-trained models (XLNet, BERT, GPT-2) are courtesy of huggingface (https://github.com/huggingface/pytorch-transformers)
 
 ## Package Installation
 ```bash
-git clone https://github.com/plkmo/NLP_Toolkit.git
-cd NLP_Toolkit
+git clone https://github.com/plkmo/Knowledge-Base-Builder.git
+cd Knowledge-Base-Builder
 pip install .
 
 # to uninstall if required to re-install after updates,
 # since this repo is still currently in active development
-pip uninstall nlptoolkit 
+pip uninstall kbuilder 
 ```
 Alternatively, you can just use it as a non-packaged repo after git clone.
 
 ---
 
-# To do list
-In order of priority:
-- [ ] Include package usage info for ~~classification~~, ASR, summarization, ~~translation~~, ~~generation~~, ~~punctuation_restoration~~, ~~NER~~, POS
-- [ ] Include benchmark results for  ~~classification~~, ASR, summarization, translation, generation, ~~punctuation_restoration~~, ~~NER~~, POS
-- [ ] Include pre-trained models + demo based on benchmark datasets for ~~classification~~, ASR, summarization, translation, ~~generation~~, punctuation_restoration, NER, POS
-- [ ] Include more models for punctuation restoration, translation, NER
+## Usage
+### Initialize
+```python
+from kbuilder.src.utils import Config
+from kbuilder.src.KB_funcs import KB_Bot
 
+config = Config()
+config.text_file = './data/text.txt' # input text file
+config.state_dict = './data/KB_Bot_state_dict.pkl' # KB save file
+bot = KB_Bot()
+```
+
+### Get Subject-Predicate-Object triplets
+```python
+bot.triplets[:5] # first 5 triplets
+```
+```bash
+[('he',
+  'turned',
+  'At the end of his diatribe against the governor and colonialism to me the Member for Tanjong Pagar who has plagued me so consistently and so vociferously in the past but is virtually the leader of the opposition in the eyes of the public'),
+ ('They',
+  'tolerate',
+  'any challenge to their hold on their Malay political base'),
+ ('I',
+  'wrote',
+  'a note authorising Keng Swee to discuss with Razak , Ismail and such other federal ministers of comparable authority concerned in these matters in the central government any proposal for any constitutional rearrange\xad ments of Malaysia'),
+ ('it',
+  'establish',
+  'The day Singapore gets independence diplomatic relations with the countries we oppose'),
+ ('The Tunku',
+  'was',
+  'was quietly talking to Keng Swee about Singapore hiving off .')]
+```
+
+### Get Subjects, Predicates, Objects
+```python
+bot.subjects[:5] # first 5 subjects
+```
+```bash
+['the colonies',
+ 'The Ivory Coast',
+ 'One man who almost understood what had happened and why it did',
+ 'the Soviet Union',
+ 'The verdict of the people']
+```
+
+```python
+bot.predicates[:5] # first 5 predicates
+```
+```bash
+['keeping', 'patted', 'twisted', 'recognise', 'remember']
+```
+
+```python
+bot.objects[:5] # first 5 objects
+```
+```bash
+['with doubts and hesitations',
+ 'By about seven o’clock',
+ 'the new system',
+ 'him that 517 The Singapore Story discussions had taken place only between our traders and their officials , not with Singapore government officers',
+ 'that had the French given the Vietnamese their full independence they might not have gone communist']
+```
+
+### Get entities
+```python
+bot.subject_entities[:5] # first 5 entities in subject
+```
+```bash
+['The Ivory Coast',
+ 'Khir Johari',
+ 'Utusan',
+ 'the Cameron Highlands',
+ 'the Soviet Union']
+```
+
+```python
+bot.object_entities[:5] # first 5 entities in object
+```
+```bash
+['the extra two days',
+ 'Viscount Head',
+ 'the Soviet Union',
+ '481 m',
+ 'Kampong Amber']
+```
+```python
+bot.subject_entities_d # entity to subjects mapping
+bot.object_entities_d # entity to objects mapping
+```
+
+### Search for specific terms in subject/predicate/object
+```python
+# searches for 'Tunku' in subject, 'was' in predicate, 'Singapore' in object
+bot.query(term=['Tunku', 'was', 'Singapore'], \
+              key=['subject', 'predicate', 'object'])
+```
+```bash
+[('The Tunku',
+  'was',
+  'was quietly talking to Keng Swee about Singapore hiving off .'),
+ ('the most devastating blow for the Tunku',
+  'was',
+  'that the Pap had defeated Umno in all three of its overwhelmingly Malay constituencies , he had specially come down which to Singapore to address on the eve of the election')]
+```
+### Question & Answer
+```python
+bot.ask("When was Lee Kuan Yew born?")
+```
+```bash
+              ***Identified Subject: When
+              ***Identified Predicate: born
+              ***Identified Object: Lee Kuan Yew
+
+10/25/2019 04:54:47 PM [INFO]: Searching...
+10/25/2019 04:54:47 PM [INFO]: Collecting results...
+Lee Kuan Yew born in Singapore on 16 September 1923.
+```

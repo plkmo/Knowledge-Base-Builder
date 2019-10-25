@@ -18,8 +18,10 @@ logger = logging.getLogger('__file__')
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--text_file', type=str, default='./data/text.txt', help="Input text file")
+    parser.add_argument('--state_dict', type=str, default="./data/KB_Bot_state_dict.pkl", \
+                        help="Saved state dict for KB_Bot")
     args = parser.parse_args()
-    save_as_pickle('args.pkl', args)
+    save_as_pickle('./data/args.pkl', args)
     
     bot = KB_Bot()
     bot.chat()
