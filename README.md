@@ -37,6 +37,7 @@ bot = KB_Bot()
 ```python
 bot.triplets[:5] # first 5 triplets
 ```
+Output:
 ```bash
 [('he',
   'turned',
@@ -59,6 +60,7 @@ bot.triplets[:5] # first 5 triplets
 ```python
 bot.subjects[:5] # first 5 subjects
 ```
+Output:
 ```bash
 ['the colonies',
  'The Ivory Coast',
@@ -70,6 +72,7 @@ bot.subjects[:5] # first 5 subjects
 ```python
 bot.predicates[:5] # first 5 predicates
 ```
+Output:
 ```bash
 ['keeping', 'patted', 'twisted', 'recognise', 'remember']
 ```
@@ -77,6 +80,7 @@ bot.predicates[:5] # first 5 predicates
 ```python
 bot.objects[:5] # first 5 objects
 ```
+Output:
 ```bash
 ['with doubts and hesitations',
  'By about seven o’clock',
@@ -89,6 +93,7 @@ bot.objects[:5] # first 5 objects
 ```python
 bot.subject_entities[:5] # first 5 entities in subject
 ```
+Output:
 ```bash
 ['The Ivory Coast',
  'Khir Johari',
@@ -100,6 +105,7 @@ bot.subject_entities[:5] # first 5 entities in subject
 ```python
 bot.object_entities[:5] # first 5 entities in object
 ```
+Output:
 ```bash
 ['the extra two days',
  'Viscount Head',
@@ -107,6 +113,7 @@ bot.object_entities[:5] # first 5 entities in object
  '481 m',
  'Kampong Amber']
 ```
+
 ```python
 bot.subject_entities_d # entity to subjects mapping
 bot.object_entities_d # entity to objects mapping
@@ -118,6 +125,7 @@ bot.object_entities_d # entity to objects mapping
 bot.query(term=['Tunku', 'was', 'Singapore'], \
               key=['subject', 'predicate', 'object'])
 ```
+Output:
 ```bash
 [('The Tunku',
   'was',
@@ -130,6 +138,7 @@ bot.query(term=['Tunku', 'was', 'Singapore'], \
 ```python
 bot.ask("When was Lee Kuan Yew born?")
 ```
+Output:
 ```bash
               ***Identified Subject: When
               ***Identified Predicate: born
