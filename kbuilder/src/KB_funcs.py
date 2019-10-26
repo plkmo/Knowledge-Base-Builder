@@ -8,6 +8,7 @@ import os
 import re
 import pandas as pd
 import numpy as np
+from collections import defaultdict
 from .preprocessing_funcs import preprocess_corpus
 from .utils import save_as_pickle, load_pickle
 import spacy
@@ -46,7 +47,7 @@ class Text_KB_Parser(object):
         self.triplets = []
         try:
             self.subject_entities = []; self.object_entities = []
-            self.subject_entities_d = {}; self.object_entities_d = {}
+            self.subject_entities_d = defaultdict(list); self.object_entities_d = defaultdict(list)
         except:
             pass
         
@@ -86,6 +87,28 @@ class Text_KB_Parser(object):
         self.triplets.extend(triplets)
         return triplets
     
+    def cleanup_func_(self, triplet):
+        subject_entities = []; object_entities = []
+        subject_entities_d = defaultdict(list); object_entities_d = defaultdict(list)
+        s, p, o = triplet
+        s_doc = self.nlp(s)
+        s_ents = s_doc.ents
+        if len(s_ents) > 0:
+            s_ents = [se.text for se in s_ents if len(re.findall("[a-z]+", se.text.lower())) > 0]
+            subject_entities.extend(s_ents)
+            for se in s_ents:
+                subject_entities_d[se].append(s)
+        
+        o_doc = self.nlp(o)
+        o_ents = o_doc.ents
+        if len(o_ents) > 0:
+            o_ents = [oe.text for oe in o_ents if len(re.findall("[a-z]+", oe.text.lower())) > 0]
+            object_entities.extend(o_ents)
+            for oe in o_ents:
+                object_entities_d[oe].append(o)
+                
+        return subject_entities, object_entities, subject_entities_d, object_entities_d 
+    
     def cleanup_(self):
         logger.info("Removing duplicates...")
         self.subjects = list(set(self.subjects))
@@ -96,8 +119,22 @@ class Text_KB_Parser(object):
         
         logger.info("Merging entities...")
         logger.info("Collecting entities in subjects and objects...")
+        cpus = multiprocessing.cpu_count()
+        pool = multiprocessing.Pool(cpus)
+        result = pool.map(self.cleanup_func_, (triplet for triplet in self.triplets))
+        
+        logger.info("Collecting results...")
         self.subject_entities = []; self.object_entities = []
-        self.subject_entities_d = {}; self.object_entities_d = {}
+        self.subject_entities_d = defaultdict(list); self.object_entities_d = defaultdict(list)
+        for se, oe, sed, oed in tqdm(result, total=len(result)):
+            self.subject_entities.extend(se); self.object_entities.extend(oe)
+            for k, v in sed.items():
+                self.subject_entities_d[k].extend(v)
+            for k, v in oed.items():
+                self.object_entities_d[k].extend(v)
+        '''
+        self.subject_entities = []; self.object_entities = []
+        self.subject_entities_d = defaultdict(list); self.object_entities_d = defaultdict(list)
         for s, p, o in tqdm(self.triplets, total=len(self.triplets)):
             s_doc = self.nlp(s)
             s_ents = s_doc.ents
@@ -120,7 +157,7 @@ class Text_KB_Parser(object):
                         self.object_entities_d[oe] = [o]
                     else:
                         self.object_entities_d[oe].append(o)
-                    
+        '''         
         self.subject_entities = list(set(self.subject_entities))
         self.object_entities = list(set(self.object_entities))
         
