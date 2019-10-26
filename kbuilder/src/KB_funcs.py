@@ -51,7 +51,7 @@ class Text_KB_Parser(object):
         except:
             pass
         
-    def get_triplets_from_sentence(self, sentence, expand=False):
+    def get_triplets_from_sentence(self, sentence, expand=False, store=False):
         triplets = []
         doc = self.nlp(sentence)
         for sent in doc.sents:
@@ -69,9 +69,10 @@ class Text_KB_Parser(object):
                     subj = " ".join(str(word) for word in subject.subtree)
                     root_ = str(root)
                     obj_ = " ".join(str(word) for obj in objs for word in obj.subtree)
-                    self.subjects.append(subj)
-                    self.predicates.append(root_)
-                    self.objects.append(obj_)
+                    if store:
+                        self.subjects.append(subj)
+                        self.predicates.append(root_)
+                        self.objects.append(obj_)
                     triplets.append((subj, root_, obj_))
                 
                 else:
@@ -79,12 +80,14 @@ class Text_KB_Parser(object):
                         subj = " ".join(str(word) for word in subject.subtree)
                         root_ = str(root)
                         obj_ = " ".join(str(word) for word in obj.subtree)
-                        self.subjects.append(subj)
-                        self.predicates.append(root_)
-                        self.objects.append(obj_)
+                        if store:
+                            self.subjects.append(subj)
+                            self.predicates.append(root_)
+                            self.objects.append(obj_)
                         triplets.append((subj, root_, obj_))
-                    
-        self.triplets.extend(triplets)
+        
+        if store:            
+            self.triplets.extend(triplets)
         return triplets
     
     def cleanup_func_(self, triplet):
@@ -120,8 +123,10 @@ class Text_KB_Parser(object):
         logger.info("Merging entities...")
         logger.info("Collecting entities in subjects and objects...")
         cpus = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(cpus)
-        result = pool.map(self.cleanup_func_, (triplet for triplet in self.triplets))
+        with multiprocessing.Pool(cpus) as pool:
+            result = list(tqdm(pool.imap(self.cleanup_func_, (triplet for triplet in self.triplets),\
+                                         chunksize=int(len(self.triplets)//cpus)),\
+                               total=len(self.triplets)))
         
         logger.info("Collecting results...")
         self.subject_entities = []; self.object_entities = []
@@ -132,32 +137,7 @@ class Text_KB_Parser(object):
                 self.subject_entities_d[k].extend(v)
             for k, v in oed.items():
                 self.object_entities_d[k].extend(v)
-        '''
-        self.subject_entities = []; self.object_entities = []
-        self.subject_entities_d = defaultdict(list); self.object_entities_d = defaultdict(list)
-        for s, p, o in tqdm(self.triplets, total=len(self.triplets)):
-            s_doc = self.nlp(s)
-            s_ents = s_doc.ents
-            if len(s_ents) > 0:
-                s_ents = [se.text for se in s_ents if len(re.findall("[a-z]+", se.text.lower())) > 0]
-                self.subject_entities.extend(s_ents)
-                for se in s_ents:
-                    if se not in self.subject_entities_d.keys():
-                        self.subject_entities_d[se] = [s]
-                    else:
-                        self.subject_entities_d[se].append(s)
             
-            o_doc = self.nlp(o)
-            o_ents = o_doc.ents
-            if len(o_ents) > 0:
-                o_ents = [oe.text for oe in o_ents if len(re.findall("[a-z]+", oe.text.lower())) > 0]
-                self.object_entities.extend(o_ents)
-                for oe in o_ents:
-                    if oe not in self.object_entities_d.keys():
-                        self.object_entities_d[oe] = [o]
-                    else:
-                        self.object_entities_d[oe].append(o)
-        '''         
         self.subject_entities = list(set(self.subject_entities))
         self.object_entities = list(set(self.object_entities))
         
@@ -172,7 +152,7 @@ class Text_KB_Parser(object):
         return ner_dict, pos_dict
     
     def question_parser(self, question):
-        triplets = self.get_triplets_from_sentence(question)
+        triplets = self.get_triplets_from_sentence(question, store=False)
         if (len(triplets) > 0):
             triplets = triplets[0]
             subject, predicate, object_ = triplets
@@ -260,11 +240,12 @@ def parallel_search(query, triplets, stemmer, key=0):
         stemmed_term = [stemmer.stem(t) for t in term]
     
     cpus = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(cpus)
     
     args_list = [(tup, key, term, stemmer, stemmed_term) for tup in triplets]
     logger.info("Searching...")
-    results = pool.map(wrapped_matcher, args_list)
+    with multiprocessing.Pool(cpus) as pool:
+        results = list(tqdm(pool.imap(wrapped_matcher, args_list,\
+                                      chunksize=int(len(args_list)//cpus)), total=len(args_list)))
     
     logger.info("Collecting results...")
     for result in tqdm(results):
@@ -316,30 +297,37 @@ def answer(qns, verb, selected_entity, triplets, stemmer):
         ans = ans[0].upper() + ans[1:]
         return ans
     
-class KB_Bot(object):
+class KB_Bot(Text_KB_Parser):
     def __init__(self, args=None):
+        super(KB_Bot, self).__init__()
         if args is None:
             args = load_pickle("./data/args.pkl")
         self.stemmer = PorterStemmer()
-        self.text_parser = Text_KB_Parser()
         
         if os.path.isfile(args.state_dict):
             self.load_(args)
         else:
             logger.info("Building KB...")
             self.df = load_tagged_data(args)
+            
             logger.info("Extracting triplets...")
-            self.df.progress_apply(lambda x: self.text_parser.get_triplets_from_sentence(x['sents']), axis=1)
-            self.text_parser.cleanup_()
-            self.subjects = self.text_parser.subjects
-            self.predicates = self.text_parser.predicates
-            self.objects = self.text_parser.objects
-            self.triplets = self.text_parser.triplets
-            self.subject_entities = self.text_parser.subject_entities
-            self.object_entities = self.text_parser.object_entities
-            self.subject_entities_d = self.text_parser.subject_entities_d
-            self.object_entities_d = self.text_parser.object_entities_d
-            self.text_parser.clear_()
+            cpus = multiprocessing.cpu_count()
+            with multiprocessing.Pool(cpus) as pool:
+                results = list(tqdm(pool.imap(self.get_triplets_from_sentence, self.df['sents'],\
+                                      chunksize=int(len(self.df['sents'])//cpus)), total=len(self.df['sents'])))
+            
+            logger.info("Collecting results...")
+            results_d = []
+            _ = [results_d.extend(t) for t in tqdm(results, total=len(results))]
+            results = results_d; del results_d
+            self.triplets = results; del results
+            self.subjects, self.predicates, self.objects = [], [], []
+            for s, p, o in tqdm(self.triplets):
+                self.subjects.append(s)
+                self.predicates.append(p)
+                self.objects.append(o)
+
+            self.cleanup_()
             self.save_(args)
             logger.info("Done and saved at %s!" % args.state_dict)
         
@@ -397,7 +385,7 @@ class KB_Bot(object):
         return matched_triplets
     
     def ask(self, question):
-        qns, verb, selected_entity = self.text_parser.question_parser(str(question))
+        qns, verb, selected_entity = self.question_parser(str(question))
         print("\n\
               ***Identified Subject: %s\n\
               ***Identified Predicate: %s\n\

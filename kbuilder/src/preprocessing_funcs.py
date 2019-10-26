@@ -50,14 +50,17 @@ def preprocess_corpus(args):
         
         logger.info("Preprocessing text...")
         cpus = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(cpus)
-        text1 = pool.map(process_text, (sent for sent in text))
+        with multiprocessing.Pool(cpus) as pool:
+            text1 = list(tqdm(pool.imap(process_text, (sent for sent in text),\
+                                        chunksize=int(len(text)//cpus)), total=len(text)))
 
         logger.info("Splitting into sentences...")
         text = " ".join([t for t in text1 if t is not None])
         del text1
         sents = re.split(r"(?<=[\.\?!])\s", text)
-        sents1 = pool.map(process_sent, (sent for sent in sents))
+        with multiprocessing.Pool(cpus) as pool:
+            sents1 = list(tqdm(pool.imap(process_sent, (sent for sent in sents),\
+                                         chunksize=int(len(sents)//cpus)), total=len(sents)))
         
         sents = sents1; del sents1
         df = pd.DataFrame(data={"sents":sents})
