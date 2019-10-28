@@ -1,9 +1,91 @@
-{% if latest_question_list %}
-    <ul>
-    {% for question in latest_question_list %}
-        <li><a href="{% url 'KB:detail' question.id %}">{{ question.question_text }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No polls are available.</p>
-{% endif %}
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Knowledge Builder</title>
+  </head>
+
+  <body>
+	<H1>Knowledge Builder</H1>
+	<P>
+	<BR>
+	
+    <label for="text">Upload document file (.txt) for building Knowledge Base</label>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+  </form>
+
+  {% if preview %}
+    <p>Text Preview: 
+	<p>
+	<textarea id="rawtext" rows="10" cols="100">
+{{preview}}
+	</textarea></p>
+  {% endif %}
+
+    <P>
+	<label for="text">Punctuated Text:</label>
+	<P>
+	<textarea id="punctuatedtext" rows="10" cols="100" readonly>
+
+	</textarea>
+	
+    <p>
+	
+	
+	<section class="code">
+	<details>
+  		<summary>Sample Python JSON API to do auto punctuation </summary>
+		<pre>
+		<code class="language-python">
+			from urllib.request import urlopen, Request
+			from urllib.parse import urlencode
+			import argparse
+			import json
+			import os
+
+			def SendTextToAutoPunctuationServer(url, Inputfile, Outfile):
+				with open(Inputfile, 'rb') as text:
+					rawTextStr = text.read()
+				
+				webdata = {'rawtext': rawTextStr }
+				params = urlencode(webdata).encode("utf-8")
+				req = Request(url)
+				response = urlopen(req, params)
+				json_response = response.read()
+
+				print("\nRequest: %s" %Inputfile)
+				#print("Response: %s" %json_response)
+
+				j = json.loads(json_response)
+				punctuatedtext = j['punctuatedtext']
+				print("punctuatedtext:", punctuatedtext)
+				print("Time elapsed:", j['timeElapse'])
+				
+				out = open(Outfile, 'w')
+				out.write(punctuatedtext)
+				out.close()
+				return
+
+			##############################################################################################################
+
+			parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+			parser.add_argument('Inputfile', help='Input file')
+			parser.add_argument('Outfile', help='Output file')
+			args = parser.parse_args()
+
+			Inputfile = args.Inputfile
+			Outfile = args.Outfile
+
+			url = 'http://localhost/nlp/punctuation'
+			SendTextToAutoPunctuationServer(url, Inputfile, Outfile)
+		</code>
+		</pre>
+	</details>
+    </section>
+
+  </body>
+    
+</html>
+

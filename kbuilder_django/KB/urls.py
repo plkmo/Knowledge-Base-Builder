@@ -6,10 +6,6 @@ app_name = 'KB'
 urlpatterns = [
     # ex: /KB/
     path('', views.index, name='index'),
-    # ex: /KB/5/
-    path('<int:question_id>/', views.detail, name='detail'),
-    # ex: /KB/5/results/
-    path('<int:question_id>/results/', views.results, name='results'),
-    # ex: /KB/5/vote/
-    path('<int:question_id>/vote/', views.vote, name='vote'),
+    path('upload_simple/', views.simple_upload, name='simple_upload'),\
+    path('upload_model/', views.model_form_upload, name='model_form_upload')
 ]
