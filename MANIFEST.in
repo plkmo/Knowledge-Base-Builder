@@ -2,3 +2,4 @@ include LICENSE
 include README.md
 global-exclude data\
 global-exclude results\
+global-exclude kbuilder_django\

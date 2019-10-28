@@ -18,6 +18,7 @@ setuptools.setup(
     url="https://github.com/plkmo/Knowledge-Base-Builder",
     packages=setuptools.find_packages(exclude=["data"\
                                                "results",\
+                                               "kbuilder_django"
                                                ]),
     install_requires=required,
     include_package_data=True,

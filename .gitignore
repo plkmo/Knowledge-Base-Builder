@@ -6,6 +6,7 @@
 *.tiff
 *.pth
 *.pyc
+*.sqlite3
 /data/*
 data/
 data
