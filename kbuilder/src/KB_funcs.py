@@ -125,7 +125,7 @@ class Text_KB_Parser(object):
         cpus = multiprocessing.cpu_count()
         with multiprocessing.Pool(cpus) as pool:
             result = list(tqdm(pool.imap(self.cleanup_func_, (triplet for triplet in self.triplets),\
-                                         chunksize=int(len(self.triplets)//cpus)),\
+                                         chunksize=max(int(len(self.triplets)//cpus), 1)),\
                                total=len(self.triplets)))
         
         logger.info("Collecting results...")
@@ -245,7 +245,7 @@ def parallel_search(query, triplets, stemmer, key=0):
     logger.info("Searching...")
     with multiprocessing.Pool(cpus) as pool:
         results = list(tqdm(pool.imap(wrapped_matcher, args_list,\
-                                      chunksize=int(len(args_list)//cpus)), total=len(args_list)))
+                                      chunksize=max(int(len(args_list)//cpus), 1)), total=len(args_list)))
     
     logger.info("Collecting results...")
     for result in tqdm(results):
@@ -314,7 +314,7 @@ class KB_Bot(Text_KB_Parser):
             cpus = multiprocessing.cpu_count()
             with multiprocessing.Pool(cpus) as pool:
                 results = list(tqdm(pool.imap(self.get_triplets_from_sentence, self.df['sents'],\
-                                      chunksize=int(len(self.df['sents'])//cpus)), total=len(self.df['sents'])))
+                                      chunksize=max(int(len(self.df['sents'])//cpus), 1)), total=len(self.df['sents'])))
             
             logger.info("Collecting results...")
             results_d = []

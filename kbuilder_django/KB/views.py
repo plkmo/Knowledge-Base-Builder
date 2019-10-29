@@ -5,21 +5,36 @@ from django.core.files.storage import FileSystemStorage
 
 from .forms import DocumentForm
 
+from kbuilder.src.KB_funcs import KB_Bot
+from kbuilder.src.utils import Config
+
+config = Config()
+bot = KB_Bot(config)
+
 def index(request):
     if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
-        if form.is_valid():
-            obj = form.save()
-            print("ID", form.instance.id)
-            print(obj.document.path)
-            with open(obj.document.path, 'r', encoding='utf8') as f:
-                preview = f.read()[:100]
-            return render(request, 'KB/index.html', {'preview':preview})
+        print("POST", request.POST)
+        if 'file-upload' in request.POST:
+            form = DocumentForm(request.POST, request.FILES)
+            if form.is_valid():
+                obj = form.save()
+                #print("ID", form.instance.id)
+                #print(obj.document.path)
+                with open(obj.document.path, 'r', encoding='utf8') as f:
+                    preview = f.read()[:100]
+                config.text_file = obj.document.path
+                bot.__init__(config)
+                return render(request, 'KB/index.html', {'preview':preview})
+        
+        elif 'query' in request.POST:
+            query = request.POST.get('query-text', None)
+            ans = bot.ask(query)
+            return render(request, 'KB/index.html', {'ans':ans})
     else:
         form = DocumentForm()
-    return render(request, 'KB/index.html', {
-        'form': form
-    })
+        return render(request, 'KB/index.html', {
+            'form': form
+            })
  
 def simple_upload(request):
     if request.method == 'POST' and request.FILES['myfile']:

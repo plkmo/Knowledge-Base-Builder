@@ -10,25 +10,33 @@
 	<BR>
 	
     <label for="text">Upload document file (.txt) for building Knowledge Base</label>
-<form method="post" enctype="multipart/form-data">
+<form id='form1' method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Upload</button>
+    <button type="submit" name='file-upload'>Upload file</button>
   </form>
 
-  {% if preview %}
-    <p>Text Preview: 
+{% if preview %}
+	<p>Text Preview: 
 	<p>
 	<textarea id="rawtext" rows="10" cols="100">
-{{preview}}
+	{{preview}}
 	</textarea></p>
-  {% endif %}
+{% endif %}
+
+<form id='form2' method="POST" enctype="multipart/form-data">
+{% csrf_token %}
+<input type="text" name="query-text">
+<button type="submit" name='query'>Query</button>
+</form>
+
+
 
     <P>
-	<label for="text">Punctuated Text:</label>
+	<label for="text">Answer</label>
 	<P>
-	<textarea id="punctuatedtext" rows="10" cols="100" readonly>
-
+	<textarea id="ans" rows="10" cols="100" readonly>
+	{{ans}}
 	</textarea>
 	
     <p>

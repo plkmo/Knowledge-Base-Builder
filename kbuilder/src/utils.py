@@ -16,6 +16,8 @@ def load_pickle(filename):
 
 def save_as_pickle(filename, data):
     completeName = filename
+    if not os.path.isdir('./data') and ('./data/' in filename):
+        os.mkdir('./data')
     with open(completeName, 'wb') as output:
         pickle.dump(data, output)
 

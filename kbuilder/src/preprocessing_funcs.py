@@ -52,7 +52,7 @@ def preprocess_corpus(args):
         cpus = multiprocessing.cpu_count()
         with multiprocessing.Pool(cpus) as pool:
             text1 = list(tqdm(pool.imap(process_text, (sent for sent in text),\
-                                        chunksize=int(len(text)//cpus)), total=len(text)))
+                                        chunksize=max(int(len(text)//cpus), 1)), total=len(text)))
 
         logger.info("Splitting into sentences...")
         text = " ".join([t for t in text1 if t is not None])
@@ -60,7 +60,7 @@ def preprocess_corpus(args):
         sents = re.split(r"(?<=[\.\?!])\s", text)
         with multiprocessing.Pool(cpus) as pool:
             sents1 = list(tqdm(pool.imap(process_sent, (sent for sent in sents),\
-                                         chunksize=int(len(sents)//cpus)), total=len(sents)))
+                                         chunksize=max(int(len(sents)//cpus), 1)), total=len(sents)))
         
         sents = sents1; del sents1
         df = pd.DataFrame(data={"sents":sents})
