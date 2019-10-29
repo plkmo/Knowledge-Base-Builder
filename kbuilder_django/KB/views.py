@@ -14,9 +14,9 @@ from kbuilder.src.utils import Config
 
 config = Config()
 bot = KB_Bot()
-channel_layer = get_channel_layer()
-async_to_sync(channel_layer.group_send)('message_group', {'type':'receive',\
-             'message': "done"})
+#channel_layer = get_channel_layer()
+#async_to_sync(channel_layer.group_send)('message_group', {'type':'receive',\
+#             'message': "done"})
 class Capturing(list):
     def __enter__(self):
         self._stdout = sys.stdout
