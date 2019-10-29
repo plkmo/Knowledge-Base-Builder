@@ -20,7 +20,7 @@ pip uninstall kbuilder
 Alternatively, you can just use it as a non-packaged repo after git clone.
 
 ## Setup Django web app
-``bash
+```bash
 cd kbuilder_django
 python manage.py migrate
 python manage.py makemigrations KB
