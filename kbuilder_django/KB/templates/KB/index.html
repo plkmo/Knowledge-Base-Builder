@@ -54,4 +54,34 @@
 	</textarea>
 	
     <p>
+
+<script>
+    var socket = new WebSocket('ws://' + window.location.host + '');
+ 
+    socket.onopen = function open() {
+      console.log('WebSocket connection created.');
+    };
+ 
+    socket.onmessage = function message(event) {
+      console.log("data from socket:" + event.data);
+      lbl.innerText = event.data;
+    };
+ 
+    if (socket.readyState == WebSocket.OPEN) {
+      socket.onopen();
+    }
+    function start()
+    {
+      socket.send('start');
+    }
+    function stop() {
+        socket.send('stop');
+    }
+  </script>
+
+<label for="Answer">Message:</label>
+	<br/>
+	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="Answer" name="Answer" readonly>
+	{{lbl.innerText}}
+	</textarea>
 	

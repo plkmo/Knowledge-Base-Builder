@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.core.files.storage import FileSystemStorage
 
 from .forms import DocumentForm
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 import sys
 from io import StringIO
@@ -12,7 +14,9 @@ from kbuilder.src.utils import Config
 
 config = Config()
 bot = KB_Bot()
-
+channel_layer = get_channel_layer()
+async_to_sync(channel_layer.group_send)('message_group', {'type':'receive',\
+             'message': "done"})
 class Capturing(list):
     def __enter__(self):
         self._stdout = sys.stdout
@@ -51,6 +55,7 @@ def index(request):
                     preview = f.read()[:100]
                 config.text_file = obj.document.path
                 bot.__init__(args=config, restart=True)
+                
                 return render(request, 'KB/index.html', {'preview': preview,\
                                                          'filename': bot.filename,\
                                                          'message': "%s uploaded and processed." % bot.filename})
