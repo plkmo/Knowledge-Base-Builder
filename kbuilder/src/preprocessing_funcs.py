@@ -38,9 +38,9 @@ def process_sent(sent):
     sent = sent[0].upper() + sent[1:]
     return sent
 
-def preprocess_corpus(args):
+def preprocess_corpus(args, restart=False):
     
-    if os.path.isfile("./data/df.pkl"):
+    if os.path.isfile("./data/df.pkl") and (not restart):
         df = load_pickle("./data/df.pkl")
         logger.info("Loaded preprocessed data.")
     else:

@@ -23,9 +23,9 @@ logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', \
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logger = logging.getLogger('__file__')
 
-def load_tagged_data(args):
-    if not os.path.isfile("./data/df_tagged.pkl"):
-        df = preprocess_corpus(args)
+def load_tagged_data(args, restart=False):
+    if (not os.path.isfile("./data/df_tagged.pkl")) or restart:
+        df = preprocess_corpus(args, restart)
     else:
         logger.info("Loading saved tagged dataset...")
         df = load_pickle("./data/df_tagged.pkl")
@@ -298,55 +298,58 @@ def answer(qns, verb, selected_entity, triplets, stemmer):
         return ans
     
 class KB_Bot(Text_KB_Parser):
-    def __init__(self, args=None):
+    def __init__(self, args=None, restart=False):
         super(KB_Bot, self).__init__()
-        if args is None:
-            args = load_pickle("./data/args.pkl")
-        self.stemmer = PorterStemmer()
-        
-        if os.path.isfile(args.state_dict):
-            self.load_(args)
+        if (args is None):
+            pass
         else:
-            logger.info("Building KB...")
-            self.df = load_tagged_data(args)
+            self.filename = args.text_file
+            self.stemmer = PorterStemmer()
             
-            logger.info("Extracting triplets...")
-            cpus = multiprocessing.cpu_count()
-            with multiprocessing.Pool(cpus) as pool:
-                results = list(tqdm(pool.imap(self.get_triplets_from_sentence, self.df['sents'],\
-                                      chunksize=max(int(len(self.df['sents'])//cpus), 1)), total=len(self.df['sents'])))
+            if os.path.isfile(args.state_dict) and (not restart):
+                self.load_(args)
+            else:
+                logger.info("Building KB...")
+                self.df = load_tagged_data(args, restart)
+                
+                logger.info("Extracting triplets...")
+                cpus = multiprocessing.cpu_count()
+                with multiprocessing.Pool(cpus) as pool:
+                    results = list(tqdm(pool.imap(self.get_triplets_from_sentence, self.df['sents'],\
+                                          chunksize=max(int(len(self.df['sents'])//cpus), 1)), total=len(self.df['sents'])))
+                
+                logger.info("Collecting results...")
+                results_d = []
+                _ = [results_d.extend(t) for t in tqdm(results, total=len(results))]
+                results = results_d; del results_d
+                self.triplets = results; del results
+                self.subjects, self.predicates, self.objects = [], [], []
+                for s, p, o in tqdm(self.triplets):
+                    self.subjects.append(s)
+                    self.predicates.append(p)
+                    self.objects.append(o)
+    
+                self.cleanup_()
+                self.save_(args)
+                logger.info("Done and saved at %s!" % args.state_dict)
             
-            logger.info("Collecting results...")
-            results_d = []
-            _ = [results_d.extend(t) for t in tqdm(results, total=len(results))]
-            results = results_d; del results_d
-            self.triplets = results; del results
-            self.subjects, self.predicates, self.objects = [], [], []
-            for s, p, o in tqdm(self.triplets):
-                self.subjects.append(s)
-                self.predicates.append(p)
-                self.objects.append(o)
-
-            self.cleanup_()
-            self.save_(args)
-            logger.info("Done and saved at %s!" % args.state_dict)
-        
-        logger.info("\n***Document statistics***")
-        logger.info("%d sentences" % len(self.df))
-        logger.info("%d characters" % self.df['length'].sum())
-        
-        logger.info("\n***KB statistics***")
-        logger.info("%d subject-predicate-object triplets" % len(self.triplets))
-        logger.info("%d subjects" % len(self.subjects))
-        logger.info("%d predicates" % len(self.predicates))
-        logger.info("%d objects" % len(self.objects))
-        logger.info("%d unique entities" % (len(self.subject_entities) +\
-                                            len(self.object_entities)))
-        
+            logger.info("\n***Document statistics***")
+            logger.info("%d sentences" % len(self.df))
+            logger.info("%d characters" % self.df['length'].sum())
+            
+            logger.info("\n***KB statistics***")
+            logger.info("%d subject-predicate-object triplets" % len(self.triplets))
+            logger.info("%d subjects" % len(self.subjects))
+            logger.info("%d predicates" % len(self.predicates))
+            logger.info("%d objects" % len(self.objects))
+            logger.info("%d unique entities" % (len(self.subject_entities) +\
+                                                len(self.object_entities)))
+            
         
     def save_(self, args):
         filename = args.state_dict
         state_dict = {'df': self.df,\
+                      'filename': self.filename,\
                       'subjects': self.subjects,\
                       'predicates': self.predicates,\
                       'objects': self.objects,\
@@ -363,6 +366,7 @@ class KB_Bot(Text_KB_Parser):
     def load_(self, args):
         state_dict = load_pickle(args.state_dict)
         self.df = state_dict['df']
+        self.filename = state_dict['filename']
         self.subjects = state_dict['subjects']
         self.predicates = state_dict['predicates']
         self.objects = state_dict['objects']

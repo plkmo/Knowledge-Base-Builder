@@ -8,8 +8,17 @@
 	<H1>Knowledge Builder</H1>
 	<P>
 	<BR>
-	
-    <label for="text">Upload document file (.txt) for building Knowledge Base</label>
+<hr>
+
+<label for="message">System message:</label>
+<br/>
+<textarea id="message" rows="3" cols="100">
+{{message}}
+</textarea>
+<hr>
+
+<h3> Upload text file </h3>
+    <label for="file-upload">Upload document file (.txt) for building Knowledge Base</label>
 <form id='form1' method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}
@@ -17,83 +26,32 @@
   </form>
 
 {% if preview %}
-	<p>Text Preview: 
-	<p>
+	<label for="rawtext">Text Preview:</label>
+	<br/>
 	<textarea id="rawtext" rows="10" cols="100">
 	{{preview}}
 	</textarea></p>
 {% endif %}
 
+{% if filename %}
+	Current file: {{filename}}
+{% endif %}
+
+<hr>
+<h3> Ask a question </h3>
+<label for="text">Input Question:</label>
 <form id='form2' method="POST" enctype="multipart/form-data">
 {% csrf_token %}
-<input type="text" name="query-text">
-<button type="submit" name='query'>Query</button>
+<input style="width:1000px; height:30px; font-size:15px;" type="text" name="query-text">
+<button style="width:75px; height:30px; font-size:15px;" type="submit" name='query'>Query</button>
 </form>
 
-
-
     <P>
-	<label for="text">Answer</label>
-	<P>
-	<textarea id="ans" rows="10" cols="100" readonly>
+	<label for="Answer">Answer:</label>
+	<br/>
+	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="Answer" name="Answer" readonly>
 	{{ans}}
 	</textarea>
 	
     <p>
 	
-	
-	<section class="code">
-	<details>
-  		<summary>Sample Python JSON API to do auto punctuation </summary>
-		<pre>
-		<code class="language-python">
-			from urllib.request import urlopen, Request
-			from urllib.parse import urlencode
-			import argparse
-			import json
-			import os
-
-			def SendTextToAutoPunctuationServer(url, Inputfile, Outfile):
-				with open(Inputfile, 'rb') as text:
-					rawTextStr = text.read()
-				
-				webdata = {'rawtext': rawTextStr }
-				params = urlencode(webdata).encode("utf-8")
-				req = Request(url)
-				response = urlopen(req, params)
-				json_response = response.read()
-
-				print("\nRequest: %s" %Inputfile)
-				#print("Response: %s" %json_response)
-
-				j = json.loads(json_response)
-				punctuatedtext = j['punctuatedtext']
-				print("punctuatedtext:", punctuatedtext)
-				print("Time elapsed:", j['timeElapse'])
-				
-				out = open(Outfile, 'w')
-				out.write(punctuatedtext)
-				out.close()
-				return
-
-			##############################################################################################################
-
-			parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-			parser.add_argument('Inputfile', help='Input file')
-			parser.add_argument('Outfile', help='Output file')
-			args = parser.parse_args()
-
-			Inputfile = args.Inputfile
-			Outfile = args.Outfile
-
-			url = 'http://localhost/nlp/punctuation'
-			SendTextToAutoPunctuationServer(url, Inputfile, Outfile)
-		</code>
-		</pre>
-	</details>
-    </section>
-
-  </body>
-    
-</html>
-

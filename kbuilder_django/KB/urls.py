@@ -5,7 +5,8 @@ from . import views
 app_name = 'KB'
 urlpatterns = [
     # ex: /KB/
-    path('', views.index, name='index'),
+    path('', views.index, name='index'),\
+    path('logs/', views.logs, name='logs'),\
     path('upload_simple/', views.simple_upload, name='simple_upload'),\
     path('upload_model/', views.model_form_upload, name='model_form_upload')
 ]
