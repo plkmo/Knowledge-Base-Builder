@@ -59,7 +59,9 @@ def index(request):
                 bot.__init__(args=config, restart=True)
                 print("filename: ", bot.filename)
                 print("modelname: ", config.state_dict)
+                form = DocumentForm()
                 return render(request, 'KB/index.html', {'preview': preview,\
+                                                         'form': form,\
                                                          'filename': bot.filename,\
                                                          'modelname': config.state_dict,\
                                                          'message': "%s uploaded and processed." % bot.filename})

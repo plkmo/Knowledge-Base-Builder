@@ -9,8 +9,7 @@
 	<P>
 	<BR>
 
-<button onclick="start()">Start</button>
-<button onclick="stop()">Stop</button>
+<button onclick="start()">Test</button>
 <br/>
 <label for="Ans">System message:</label>
 	<br/>
@@ -34,17 +33,11 @@
 	</textarea></p>
 {% endif %}
 
-<label for="rawfile">filename:</label>
-	<br/>
-<textarea id="filename" rows="2" cols="100">
-{{filename}}
-	</textarea></p>
-<label for="rawmodel">Model saved path:</label>
-	<br/>
-<textarea id="modelname" rows="2" cols="100">
-{{modelname}}
-	</textarea>
-<button style="width:175px; height:30px; font-size:15px;" onclick="load_file(document.getElementById('modelname').value)" >Load this model</button>
+
+File saved path: <div id="filename">{{filename}}</div>
+<br/>
+Model saved path: <div id="modelname">{{modelname}}</div>
+<button style="width:175px; height:30px; font-size:15px;" onclick="load_file(document.getElementById('modelname').innerText)" >Load this model</button><div id="mod_status"></div>
 
 <hr>
 <h3> Ask a question </h3>
@@ -59,6 +52,17 @@
 	</textarea>
 	
     <p>
+
+<hr>
+<h3> Find specific Subject and/or Predicate and/or Object </h3>
+<label for="text">Input Subject:</label>
+<input style="width:300px; height:30px; font-size:15px;" type="text" id="subject" name="subject">
+<br/>
+<label for="text">Input Predicate:</label>
+<input style="width:300px; height:30px; font-size:15px;" type="text" id="predicate" name="predicate">
+<br/>
+<label for="text">Input Object:</label>
+<input style="width:300px; height:30px; font-size:15px;" type="text" id="object" name="object">
 
 <script>
     var socket = new WebSocket('ws://' + window.location.host + '');
@@ -76,6 +80,9 @@
 		break;
 	case "query":
 		answer.innerText = msg.text;
+		break;
+	case "model_status":
+		mod_status.innerText = msg.text;
 		break;
 };
     };

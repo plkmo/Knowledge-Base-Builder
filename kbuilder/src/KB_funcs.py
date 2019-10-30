@@ -365,6 +365,7 @@ class KB_Bot(Text_KB_Parser):
     
     def load_(self, args):
         state_dict = load_pickle(args.state_dict)
+        self.stemmer = PorterStemmer()
         self.df = state_dict['df']
         self.filename = state_dict['filename']
         self.subjects = state_dict['subjects']

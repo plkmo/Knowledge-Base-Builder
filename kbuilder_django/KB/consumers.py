@@ -24,6 +24,7 @@ class ChatConsumer(WebsocketConsumer):
         pass
 
     def receive(self, text_data):
+        handler_dict = {"filename":"load_model", "query":"query"}
         print("TEXT_DATA:_received", text_data)
         text_data_json = json.loads(text_data)
         message = text_data_json['text']
@@ -33,7 +34,7 @@ class ChatConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_send)(
             "message_group",
             {
-                'type': 'load_model' if label == 'filename' else 'send_message',
+                'type': handler_dict.setdefault(label,'send_message'),\
                 'text': message,\
                 'label': label
             }
@@ -52,3 +53,13 @@ class ChatConsumer(WebsocketConsumer):
         print("TEXT_DATA_load_model:", event)
         config.state_dict = event['text']
         bot.load_(config)
+        self.send(text_data=json.dumps({"type":"msg",\
+                                        "text": "Loaded model!",\
+                                        "label": "model_status"}))
+        
+    def query(self, event):
+        ans = bot.ask(event['text'])
+        self.send(text_data=json.dumps({"type":"query",\
+                                        "text": ans,\
+                                        "label": "query"}))
+        
