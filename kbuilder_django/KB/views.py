@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.core.files.storage import FileSystemStorage
@@ -9,11 +9,14 @@ from asgiref.sync import async_to_sync
 
 import sys
 from io import StringIO
+from .websocket_send import send_text
 from kbuilder.src.KB_funcs import KB_Bot
 from kbuilder.src.utils import Config
+import asyncio
 
 config = Config()
 bot = KB_Bot()
+event_loop = asyncio.new_event_loop()
 #channel_layer = get_channel_layer()
 #async_to_sync(channel_layer.group_send)('message_group', {'type':'receive',\
 #             'message': "done"})
@@ -49,20 +52,22 @@ def index(request):
             form = DocumentForm(request.POST, request.FILES)
             if form.is_valid():
                 obj = form.save()
-                #print("ID", form.instance.id)
-                #print(obj.document.path)
+                send_text("Processing, this may take a while, please wait...", event_loop)
                 with open(obj.document.path, 'r', encoding='utf8') as f:
                     preview = f.read()[:100]
                 config.text_file = obj.document.path
                 bot.__init__(args=config, restart=True)
-                
+                print("filename: ", bot.filename)
+                print("modelname: ", config.state_dict)
                 return render(request, 'KB/index.html', {'preview': preview,\
                                                          'filename': bot.filename,\
+                                                         'modelname': config.state_dict,\
                                                          'message': "%s uploaded and processed." % bot.filename})
         
         elif 'query' in request.POST:
             query = request.POST.get('query-text', None)
             ans = bot.ask(query)
+            send_text("Done", event_loop)
             return render(request, 'KB/index.html', {'ans': ans,\
                                                      'filename': bot.filename,\
                                                      'message': "Query processed."})

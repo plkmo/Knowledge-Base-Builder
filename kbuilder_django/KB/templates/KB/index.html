@@ -8,13 +8,14 @@
 	<H1>Knowledge Builder</H1>
 	<P>
 	<BR>
-<hr>
 
-<label for="message">System message:</label>
+<button onclick="start()">Start</button>
+<button onclick="stop()">Stop</button>
 <br/>
-<textarea id="message" rows="3" cols="100">
-{{message}}
-</textarea>
+<label for="Ans">System message:</label>
+	<br/>
+	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="lbl" name="lbl" readonly>
+	</textarea>
 <hr>
 
 <h3> Upload text file </h3>
@@ -33,24 +34,28 @@
 	</textarea></p>
 {% endif %}
 
-{% if filename %}
-	Current file: {{filename}}
-{% endif %}
+<label for="rawfile">filename:</label>
+	<br/>
+<textarea id="filename" rows="2" cols="100">
+{{filename}}
+	</textarea></p>
+<label for="rawmodel">Model saved path:</label>
+	<br/>
+<textarea id="modelname" rows="2" cols="100">
+{{modelname}}
+	</textarea>
+<button style="width:175px; height:30px; font-size:15px;" onclick="load_file(document.getElementById('modelname').value)" >Load this model</button>
 
 <hr>
 <h3> Ask a question </h3>
 <label for="text">Input Question:</label>
-<form id='form2' method="POST" enctype="multipart/form-data">
-{% csrf_token %}
-<input style="width:1000px; height:30px; font-size:15px;" type="text" name="query-text">
-<button style="width:75px; height:30px; font-size:15px;" type="submit" name='query'>Query</button>
-</form>
+<input style="width:1000px; height:30px; font-size:15px;" type="text" id="query-text" name="query-text">
+<button style="width:75px; height:30px; font-size:15px;" onclick="query(document.getElementById('query-text').value)" >Query</button>
 
     <P>
-	<label for="Answer">Answer:</label>
+	<label for="ans">Answer:</label>
 	<br/>
-	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="Answer" name="Answer" readonly>
-	{{ans}}
+	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="answer" readonly>
 	</textarea>
 	
     <p>
@@ -63,8 +68,16 @@
     };
  
     socket.onmessage = function message(event) {
-      console.log("data from socket:" + event.data);
-      lbl.innerText = event.data;
+      	console.log("data from socket:" + event.data);
+	msg = JSON.parse(event.data);
+	switch(msg.label) {
+	case "msg":
+		lbl.innerText = msg.text;
+		break;
+	case "query":
+		answer.innerText = msg.text;
+		break;
+};
     };
  
     if (socket.readyState == WebSocket.OPEN) {
@@ -72,23 +85,17 @@
     }
     function start()
     {
-      socket.send('start');
+      socket.send('{"text": "start", "label":"msg"}');
     }
     function stop() {
-        socket.send('stop');
+      socket.send('{"text": "stop", "label":"msg"}');
     }
-  </script>
+function query(text) {
+        socket.send('{"text": "' + text + '", "label":"query"}');
+    }
+function load_file(filename) {
+        socket.send('{"text": "' + filename+ '", "label":"filename"}');
+    }
 
-<h2>hello</h2>
- 
-<button onclick="start()">Start</button>
-<button onclick="stop()">Stop</button>
- 
-<label id="lbl">Data</label>
+</script>
 
-<label for="Answer">Message:</label>
-	<br/>
-	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="Answer" name="Answer" readonly>
-	{{lbl.innerText}}
-	</textarea>
-	

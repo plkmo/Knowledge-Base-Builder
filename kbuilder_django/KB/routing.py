@@ -3,4 +3,5 @@ from .consumers import ChatConsumer
 
 
 channel_routing = [
-    path('', ChatConsumer)]
+    path('', ChatConsumer),\
+    ]
