@@ -63,6 +63,16 @@ Model saved path: <div id="modelname">{{modelname}}</div>
 <br/>
 <label for="text">Input Object:</label>
 <input style="width:300px; height:30px; font-size:15px;" type="text" id="object" name="object">
+<br/>
+<button style="width:175px; height:30px; font-size:15px;" onclick="send_triplet(document.getElementById('subject').value,
+										document.getElementById('predicate').value,
+										document.getElementById('object').value)" >Find</button>
+<br/>
+<p>
+<label for="ans1">Answer:</label>
+<br/>
+<textarea style="width:1000px; height:300px; font-size:15px;" rows="100" cols="120" id="matched_triplets" readonly>
+</textarea>
 
 <script>
     var socket = new WebSocket('ws://' + window.location.host + '');
@@ -84,6 +94,9 @@ Model saved path: <div id="modelname">{{modelname}}</div>
 	case "model_status":
 		mod_status.innerText = msg.text;
 		break;
+	case "triplet":
+		matched_triplets.innerText = msg.text;
+		break;
 };
     };
  
@@ -102,6 +115,9 @@ function query(text) {
     }
 function load_file(filename) {
         socket.send('{"text": "' + filename+ '", "label":"filename"}');
+    }
+function send_triplet(subject, predicate, object) {
+	socket.send('{"text": "' + subject + '@' + predicate + '@' + object + '", "label":"triplet"}');
     }
 
 </script>

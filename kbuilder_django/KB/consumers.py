@@ -24,7 +24,7 @@ class ChatConsumer(WebsocketConsumer):
         pass
 
     def receive(self, text_data):
-        handler_dict = {"filename":"load_model", "query":"query"}
+        handler_dict = {"filename":"load_model", "query":"query", "triplet":"find_triplet"}
         print("TEXT_DATA:_received", text_data)
         text_data_json = json.loads(text_data)
         message = text_data_json['text']
@@ -63,3 +63,11 @@ class ChatConsumer(WebsocketConsumer):
                                         "text": ans,\
                                         "label": "query"}))
         
+    def find_triplet(self, event):
+        triplet = event['text'].split("@")
+        assert len(triplet) == 3
+        sub, pred, obj = triplet
+        matched_triplets = bot.query(triplet, ['subject', 'predicate', 'object'])
+        self.send(text_data=json.dumps({"type": "triplet",\
+                                        "text": str(matched_triplets),\
+                                        "label": "triplet"}))
