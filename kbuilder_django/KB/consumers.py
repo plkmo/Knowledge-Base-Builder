@@ -16,6 +16,7 @@ bot = KB_Bot()
 
 class ChatConsumer(WebsocketConsumer):
     def connect(self):
+        self.user = self.scope["user"]; print(self.user)
         self.accept()
         async_to_sync(self.channel_layer.group_add)("message_group", self.channel_name)
 

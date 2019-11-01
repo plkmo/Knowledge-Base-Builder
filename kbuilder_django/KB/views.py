@@ -54,7 +54,7 @@ def index(request):
                 obj = form.save()
                 send_text("Processing, this may take a while, please wait...", event_loop)
                 with open(obj.document.path, 'r', encoding='utf8') as f:
-                    preview = f.read()[:100]
+                    preview = f.read()[:300]
                 config.text_file = obj.document.path
                 bot.__init__(args=config, restart=True)
                 print("filename: ", bot.filename)
@@ -64,7 +64,7 @@ def index(request):
                                                          'form': form,\
                                                          'filename': bot.filename,\
                                                          'modelname': config.state_dict,\
-                                                         'message': "%s uploaded and processed." % bot.filename})
+                                                         'message': "%s uploaded and processed. Please load model with button below." % bot.filename})
         
         elif 'query' in request.POST:
             query = request.POST.get('query-text', None)

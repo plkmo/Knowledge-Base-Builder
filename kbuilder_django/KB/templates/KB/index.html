@@ -2,6 +2,11 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Knowledge Builder</title>
+	<style>
+	H1 {color:blue;}
+	p {color:purple;}
+	h3 {color:#166C09;}
+	</style>
   </head>
 
   <body>
@@ -9,11 +14,12 @@
 	<P>
 	<BR>
 
-<button onclick="start()">Test</button>
+<button onclick="start()">Test Websocket</button>
 <br/>
 <label for="Ans">System message:</label>
 	<br/>
-	<textarea style="width:1000px; height:30px; font-size:15px;" rows="30" cols="100" id="lbl" name="lbl" readonly>
+	<textarea style="width:1000px; height:50px; font-size:15px;" rows="30" cols="100" id="lbl" name="lbl" readonly>
+{{message}}
 	</textarea>
 <hr>
 
@@ -105,7 +111,7 @@ Model saved path: <div id="modelname">{{modelname}}</div>
     }
     function start()
     {
-      socket.send('{"text": "start", "label":"msg"}');
+      socket.send('{"text": "Websocket working!", "label":"msg"}');
     }
     function stop() {
       socket.send('{"text": "stop", "label":"msg"}');
@@ -121,4 +127,5 @@ function send_triplet(subject, predicate, object) {
     }
 
 </script>
+</html>
 
