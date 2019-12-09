@@ -8,12 +8,12 @@ Also provides flexible text query capabilities (subject, predicate, object, Q & 
 Python API
 1. [Initialize](#Initialize)
 2. [Get Subject-Predicate-Object triplets](#Get-Subject-Predicate-Object-triplets)
-3. [Get Subjects, Predicates, Objects](#Get-Subjects,-Predicates,-Objects)
+3. [Get Subjects, Predicates, Objects](#Get-Subjects-Predicates-Objects)
 4. [Get entities](#Get-entities)
-5. [Search for specific terms in subject/predicate/object](#Search-for-specific-terms-in-subject/predicate/object)
-6. [Question & Answer](#Question-&-Answer)
+5. [Search for specific terms in subject/predicate/object](#Search-for-specific-terms-in-subject-predicate-object)
+6. [Question & Answer](#Question---Answer)
 
-Django Web App
+Django Web App  
 7. [Django Web Application](#Django-Web-Application)
 
 ## Pre-requisites
@@ -33,6 +33,7 @@ Alternatively, you can just use it as a non-packaged repo after git clone.
 
 ## Setup Django web app
 Requires Django installation, Django channels (https://channels.readthedocs.io/en/latest/introduction.html), Docker
+
 ```bash
 cd kbuilder_django
 python manage.py migrate
@@ -41,6 +42,7 @@ python manage.py sqlmigrate KB 0001
 docker run -p 6379:6379 -d redis:2.8
 python manage.py runserver
 ```
+
 Open browser at http://127.0.0.1:8000/KB/
 ---
 
@@ -174,4 +176,4 @@ Lee Kuan Yew born in Singapore on 16 September 1923.
 ```
 
 ### Django Web Application
-![](https://github.com/plkmo/NLP_Toolkit/blob/master/kbuilder_django/app_screenshot.png) 
+![](https://github.com/plkmo/Knowledge-Base-Builder/blob/master/kbuilder_django/app_screenshot.png) 
