@@ -11,7 +11,7 @@ Python API
 3. [Get Subjects, Predicates, Objects](#Get-Subjects-Predicates-Objects)
 4. [Get entities](#Get-entities)
 5. [Search for specific terms in subject/predicate/object](#Search-for-specific-terms-in-subject-predicate-object)
-6. [Question & Answer](#Question---Answer)
+6. [Question & Answer](#Question-And-Answer)
 
 Django Web App  
 7. [Django Web Application](#Django-Web-Application)
@@ -145,7 +145,7 @@ bot.subject_entities_d # entity to subjects mapping
 bot.object_entities_d # entity to objects mapping
 ```
 
-### Search for specific terms in subject/predicate/object
+### Search for specific terms in subject, predicate, object
 ```python
 # searches for 'Tunku' in subject, 'was' in predicate, 'Singapore' in object
 bot.query(term=['Tunku', 'was', 'Singapore'], \
@@ -160,7 +160,7 @@ Output:
   'was',
   'that the Pap had defeated Umno in all three of its overwhelmingly Malay constituencies , he had specially come down which to Singapore to address on the eve of the election')]
 ```
-### Question & Answer
+### Question And Answer
 ```python
 bot.ask("When was Lee Kuan Yew born?")
 ```
