@@ -64,7 +64,7 @@ class Text_KB_Parser(object):
                 elif child.dep_ in ["dobj", "attr", "prep", "ccomp"]:
                     objs.append(child)
             
-            if (subject is not None) and (len(objs) > 0):
+            if (subject is not None) and (len(objs) > 0): # found subject, objects
                 if not expand:
                     subj = " ".join(str(word) for word in subject.subtree)
                     root_ = str(root)
@@ -280,6 +280,9 @@ def double_matcher(tup, keys, terms, stemmer, stemmed_terms): # terms, keys >= 2
 def answer(qns, verb, selected_entity, triplets, stemmer):
     if (qns == None) or (verb == None) or (selected_entity == None):
         return "I can't find what you want. Try something else."
+    
+    if selected_entity.lower() == "who": # invert subject & object if object == who
+        qns, selected_entity = selected_entity, qns
     
     best_result = parallel_search([selected_entity, verb], triplets, stemmer, key=[0,1])
     if len(best_result) == 0:

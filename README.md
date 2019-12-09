@@ -1,7 +1,20 @@
 # Knowledge Base Builder
-Builds a Knowledge Base from a given input corpus, from which different applications can be served. Also provides flexible query capabilities as well as analytics insights into text contents.
+Builds a Knowledge Base from a given input corpus, from which different applications can be served.  
+Also provides flexible text query capabilities (subject, predicate, object, Q & A) as well as analytics insights into the text contents.
 
 ---
+
+## Contents
+Python API
+1. [Initialize](#Initialize)
+2. [Get Subject-Predicate-Object triplets](#Get-Subject-Predicate-Object-triplets)
+3. [Get Subjects, Predicates, Objects](#Get-Subjects,-Predicates,-Objects)
+4. [Get entities](#Get-entities)
+5. [Search for specific terms in subject/predicate/object](#Search-for-specific-terms-in-subject/predicate/object)
+6. [Question & Answer](#Question-&-Answer)
+
+Django Web App
+7. [Django Web Application](#Django-Web-Application)
 
 ## Pre-requisites
 networkx==2.3 ; spacy==2.1.8 ; nltk==3.4.4  
@@ -14,12 +27,12 @@ cd Knowledge-Base-Builder
 pip install .
 
 # to uninstall if required to re-install after updates,
-# since this repo is still currently in active development
 pip uninstall kbuilder 
 ```
 Alternatively, you can just use it as a non-packaged repo after git clone.
 
 ## Setup Django web app
+Requires Django installation, Django channels (https://channels.readthedocs.io/en/latest/introduction.html), Docker
 ```bash
 cd kbuilder_django
 python manage.py migrate
@@ -28,10 +41,12 @@ python manage.py sqlmigrate KB 0001
 docker run -p 6379:6379 -d redis:2.8
 python manage.py runserver
 ```
+Open browser at http://127.0.0.1:8000/KB/
 ---
 
 ## Usage
 ### Initialize
+Input text file to be processed.
 ```python
 from kbuilder.src.utils import Config
 from kbuilder.src.KB_funcs import KB_Bot
@@ -157,3 +172,6 @@ Output:
 10/25/2019 04:54:47 PM [INFO]: Collecting results...
 Lee Kuan Yew born in Singapore on 16 September 1923.
 ```
+
+### Django Web Application
+![](https://github.com/plkmo/NLP_Toolkit/blob/master/kbuilder_django/app_screenshot.png) 
